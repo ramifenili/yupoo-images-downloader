@@ -368,7 +368,11 @@ else:
 		async def get_pages(self, url_ = None):
 			try:
 				if self.all_albums:
-					url = f"{self.urls}/albums?tab=gallery&page=1"
+					if self.urls[-1] == "/":
+						path_ = "albums?tab=gallery&page=1"
+					else:
+						path_ = "/albums?tab=gallery&page=1"
+					url = f"{self.urls}{path_}"
 				else:
 					url = f"{url_}?page=1"
 					if "?" in url_:
@@ -456,6 +460,7 @@ else:
 					title = (await self.parse_title('blank', name_catalog))
 
 				if self.all_albums:
+					self.urls = self.urls[:-1] if self.urls[-1] == '/' else self.urls
 					self.albums[name_catalog][title] = {"album_link": self.urls+new_href}
 				else:
 					self.albums[name_catalog][title] = {"album_link": f"https://{base_url}.com{new_href}", "category_title": page[3][0], "category_id": page[3][1]}
@@ -474,39 +479,39 @@ else:
 				src_cover = re.findall('/((?:(?!/).)*)/medium', src_cover)
 			album_div = soup.find_all("div", {"class": "showalbum__children"})
 			if len(album_div) == 0:
-				self.error = 'não encontrado imagens no álbum, link potencialmente inválido!'
-				raise self.FatalException()
-			for img in album_div:
-				typee_ = img.select_one(".image__imagewrap")
-				if typee_.get("data-type") == "video":
-					album_imgs_links.append(f"video")
-					continue
-				img = img.find("img")
-				src = img.get("data-origin-src") #data-origin-src
-				if self.cover:
-					src_re = re.findall('/((?:(?!/).)*)/((?:(?!/).)*)\.((?:(?!\.).)*)$', src)
-					if src_cover[0] == src_re[0][0]:
-						album_imgs_links.append(f"https:{src}")
-						break
-					continue
-				elif self.cover == False:
-					album_imgs_links.append(f"https:{src}")
-			if self.all_albums:
-				self.albums[keys[0]][keys[1]]['imgs'] = album_imgs_links
+				logger.info(f'não encontrado imagens no álbum, link potencialmente inválido! {r[2]}')
 			else:
-				if keys == None:
-					if name_catalog not in self.albums:
-						self.albums[name_catalog] = {}
-					title = soup.select_one("span.showalbumheader__gallerytitle").text
-					title = await self.parse_title(title, name_catalog)
-					if title == '':
-						title = await self.parse_title('blank', name_catalog)
+				for img in album_div:
+					typee_ = img.select_one(".image__imagewrap")
+					if typee_.get("data-type") == "video":
+						album_imgs_links.append(f"video")
+						continue
+					img = img.find("img")
+					src = img.get("data-origin-src") #data-origin-src
+					if self.cover:
+						src_re = re.findall('/((?:(?!/).)*)/((?:(?!/).)*)\.((?:(?!\.).)*)$', src)
+						if src_cover[0] == src_re[0][0]:
+							album_imgs_links.append(f"https:{src}")
+							break
+						continue
+					elif self.cover == False:
+						album_imgs_links.append(f"https:{src}")
+				if self.all_albums:
+					self.albums[keys[0]][keys[1]]['imgs'] = album_imgs_links
 				else:
-					title = keys[1]
-				if title not in self.albums[name_catalog]:
-					self.albums[name_catalog][title] = {}
-					self.albums[name_catalog][title]["album_link"] = r[2]
-				self.albums[name_catalog][title]["imgs"] = album_imgs_links
+					if keys == None:
+						if name_catalog not in self.albums:
+							self.albums[name_catalog] = {}
+						title = soup.select_one("span.showalbumheader__gallerytitle").text
+						title = await self.parse_title(title, name_catalog)
+						if title == '':
+							title = await self.parse_title('blank', name_catalog)
+					else:
+						title = keys[1]
+					if title not in self.albums[name_catalog]:
+						self.albums[name_catalog][title] = {}
+						self.albums[name_catalog][title]["album_link"] = r[2]
+					self.albums[name_catalog][title]["imgs"] = album_imgs_links
 
 		async def get_imgs(self, r):
 			keys = (await self.find_key(self.albums, r[2]))[0]

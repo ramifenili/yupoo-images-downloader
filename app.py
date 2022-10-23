@@ -7,6 +7,10 @@ import asyncio
 from time import sleep, perf_counter
 asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
+import requests
+from urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
+
 from rich.console import Console
 from rich.text import Text
 from rich.panel import Panel
@@ -15,7 +19,6 @@ import re
 from tkinter import filedialog
 import tkinter as tk
 import json
-import requests
 
 from edit_rich import make_prompt, render_default
 
@@ -83,7 +86,7 @@ class App():
 			return v_total
 
 		try:
-			resp = requests.get('https://st1np.live/api/avisos', timeout=10)
+			resp = requests.get('https://st1np.live/api/avisos', timeout=10, verify=False)
 			resp_json = json.loads(resp.text)
 
 			new_version = version_to_num(resp_json['version'])
